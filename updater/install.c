@@ -178,14 +178,20 @@ Value* MountFn(const char* name, State* state, int argc, Expr* argv[]) {
                     location, fs_type);
         }
 
+        result = mount_point;
         if (mount(location, mount_point, fs_type,
                   MS_NOATIME | MS_NODEV | MS_NODIRATIME,
                   has_mount_options ? mount_options : "") < 0) {
-            uiPrintf(state, "%s: failed to mount %s at %s: %s\n",
-                    name, location, mount_point, strerror(errno));
-            result = strdup("");
-        } else {
-            result = mount_point;
+            /*
+             * Maybe file-system dependent mount options are passed
+             * Retry with the default options
+             */
+            if (mount(location, mount_point, fs_type,
+                      MS_NOATIME | MS_NODEV | MS_NODIRATIME, "") < 0) {
+                uiPrintf(state, "%s: failed to mount %s at %s: %s\n",
+                        name, location, mount_point, strerror(errno));
+                result = strdup("");
+            }
         }
     }
 
